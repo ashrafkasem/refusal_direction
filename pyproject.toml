@@ -1,0 +1,43 @@
+[project]
+name = "refusal-direction"
+version = "0.2.0"
+description = "Refusal direction pipeline (Arditi et al. 2024) on Qwen3.5-4B / 9B with the 2023-2024 and 2026 (XL-SafetyBench) datasets"
+requires-python = ">=3.12,<3.13"
+# Versions match the WSL Ubuntu environment the experiment was run in.
+dependencies = [
+    "torch==2.14.1",                 # CUDA 13.0 build, from the PyTorch index below
+    "transformers==5.19.0",          # native Qwen3.5 support
+    "accelerate==1.15.0",
+    "bitsandbytes==0.50.2",          # 4-bit NF4 loading of Qwen3.5-9B
+    "huggingface-hub==2.2.0",
+    "safetensors==0.8.0",
+    "tokenizers==0.23.3",
+    "sentencepiece==0.2.2",
+    "protobuf==7.36.2",
+    "datasets==5.1.0",               # Alpaca / Pile for the CE-loss evaluation
+    "zstandard==0.25.0",             # needed to stream the (zstd-compressed) Pile
+    "pandas==3.0.6",                 # dataset/build_xl2026.py
+    "pyarrow==26.0.0",
+    "numpy==2.5.4",
+    "jaxtyping==0.3.11",
+    "einops==0.8.2",
+    "tqdm==4.70.1",
+    "matplotlib==3.11.2",
+    # Fast Gated-DeltaNet kernels for Qwen3.5's linear-attention layers (Triton-based)
+    "flash-linear-attention==0.5.2",
+    "triton==3.8.0; sys_platform == 'linux'",
+    "triton-windows==3.8.0.post29; sys_platform == 'win32'",
+]
+
+[tool.uv]
+# This repo is a set of scripts run with `python -m pipeline.run_pipeline`, not an installable package.
+package = false
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+# Plain PyPI ships a CPU-only torch on Windows; pin both platforms to the CUDA 13.0 build so the NVIDIA GPU is used.
+torch = [{ index = "pytorch-cu130" }]
