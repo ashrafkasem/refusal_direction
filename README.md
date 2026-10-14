@@ -48,6 +48,29 @@ For convenience, we have included pipeline artifacts for the smallest model in e
 - [`meta-llama/llama-2-7b-chat-hf`](/pipeline/runs/llama-2-7b-chat-hf/)
 - [`meta-llama/meta-llama-3-8b-instruct`](/pipeline/runs/meta-llama-3-8b-instruct/)
 
+## Dataset versions and Qwen3.5 support (this fork)
+
+The pipeline can extract the refusal direction from either of two harmful/harmless datasets:
+
+| `--dataset_version` | Harmful prompts | Harmless prompts | Splits |
+|---|---|---|---|
+| `2023-2024` (default) | AdvBench, MaliciousInstruct, TDC2023, HarmBench, JailbreakBench, StrongREJECT | Alpaca | `dataset/splits/` (original) |
+| `2026` | [XL-SafetyBench](https://huggingface.co/datasets/AIM-Intelligence/XL-SafetyBench) (Apr 2026) jailbreak-track base queries, 1,500 prompts across 10 countries | XL-SafetyBench cultural-track scenarios, 999 prompts | `dataset/splits_2026/` |
+
+The 2026 splits are stratified by country and are rebuilt with `python dataset/build_xl2026.py`. They share no prompts with the 2023-2024 data. Every run evaluates on both held-out harmful sets (`jailbreakbench` and `xlsafety2026`), so each direction is also tested on the other dataset.
+
+Other changes:
+- `pipeline/model_utils/qwen35_model.py` adds Qwen3.5 (hybrid Gated-DeltaNet / full-attention) models in non-thinking mode, with optional 4-bit NF4 loading (`--load_in_4bit`).
+- The LlamaGuard2 judge (Together AI API) is replaced by a local [Qwen3Guard-Gen-4B](https://huggingface.co/Qwen/Qwen3Guard-Gen-4B) judge, run after generation with `python -m pipeline.judge_all`.
+- `python -m pipeline.summarize` collects all runs into `pipeline/runs/summary.json`.
+
+```bash
+uv sync                                   # creates .venv (CUDA 13.0 torch on Linux and Windows)
+python -m pipeline.run_pipeline --model_path Qwen/Qwen3.5-4B --dataset_version 2026 --gen_batch_size 16
+python -m pipeline.run_pipeline --model_path Qwen/Qwen3.5-9B --dataset_version 2026 --gen_batch_size 16 --load_in_4bit
+./master.sh                               # full experiment: 2 models x 2 datasets, judging, summary
+```
+
 ## Minimal demo Colab
 
 As part of our [blog post](https://www.lesswrong.com/posts/jGuXSZgv6qfdhMCuJ/refusal-in-llms-is-mediated-by-a-single-direction), we included a minimal demo of bypassing refusal. This demo is available as a [Colab notebook](https://colab.research.google.com/drive/1a-aQvKC9avdZpdyBn4jgRQFObTPy1JZw).

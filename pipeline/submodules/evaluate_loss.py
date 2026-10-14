@@ -65,7 +65,7 @@ def batch_iterator_alpaca(tokenize_instructions_fn, batch_size, eoi_toks):
 
 def batch_iterator_pile(tokenizer, batch_size, max_length):
     """Yields batches from the Pile dataset."""
-    dataset = load_dataset("monology/pile-uncopyrighted", split="train", streaming=True, trust_remote_code=True)
+    dataset = load_dataset("monology/pile-uncopyrighted", split="train", streaming=True)
 
     it_dataset = iter(dataset)
     while True:
@@ -97,8 +97,10 @@ def compute_loss_over_dataset(model, tokenizer, batch_iterator, n_batches=256, f
             model_outputs = model(**inputs)
 
         logits = model_outputs.logits
-        log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
-        log_probs_for_labels = log_probs[:, :-1].gather(dim=-1, index=input_ids[:, 1:].unsqueeze(-1)).squeeze(-1)
+        log_probs_for_labels = -torch.nn.functional.cross_entropy(
+            logits[:, :-1].flatten(0, 1).float(), input_ids[:, 1:].flatten(), reduction="none"
+        ).view(input_ids.shape[0], -1)
+        del logits, model_outputs
 
         # add a last column of zeros to log_probs_for_labels to match the shape of loss_mask
         log_probs_for_labels = torch.cat(
